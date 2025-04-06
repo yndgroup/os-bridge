@@ -5,6 +5,7 @@ edition = "2021"
 authors = ["ydaqiong <ydaqiong@gmail.com>"]
 description = "A cross platform API bridge based on Rust language"
 license = "MIT"
+links = "bridge"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 # target = ["dep:serde"]  # 启用 serde 支持
