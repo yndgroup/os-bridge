@@ -1,4 +1,4 @@
-use crate::{common::{osbridge::OsBridge, utils}, BridgeResult};
+use crate::{common::{core::OsBridge, utils}, BridgeResult};
 
 pub struct Bridge {}
 
