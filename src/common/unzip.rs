@@ -15,7 +15,7 @@ use zip::unstable::write::FileOptionsExt;
 use zip::{write::FileOptions, CompressionMethod, ZipWriter};
 
 pub struct Unzip {
-  zip_pwd: Option<String>,
+  pub zip_pwd: Option<String>,
 }
 
 impl Unzip {
