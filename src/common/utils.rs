@@ -2,14 +2,14 @@ use rand::Rng;
 
 use crate::{common::errors::BridgeError, BridgeResult};
 
-/// 获取进程的PID 支持windows macos linux
+/// Get the PID of the process supports Windows, macOS, and Linux
 pub fn get_pid() -> BridgeResult<u32> {
     let pid = sysinfo::get_current_pid().map_err(|err| BridgeError::WithMsg(err.to_string()))?;
     Ok(pid.as_u32())
 }
 
 
-// 生成随机字符串
+// Generate a random string
 #[allow(unused)]
 pub fn random_string(len: usize) -> String {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
@@ -25,7 +25,7 @@ pub fn random_string(len: usize) -> String {
     return password;
 }
 
-// 生成16位的随机密码
+// Generate a 16 bit random password
 #[allow(unused)]
 pub fn get_random_key16() -> BridgeResult<[u8; 16]> {
     let mut arr: [u8; 16] = [0u8; 16];
@@ -33,7 +33,7 @@ pub fn get_random_key16() -> BridgeResult<[u8; 16]> {
     Ok(arr)
 }
 
-// 将数组转换为字符串
+// Convert an array to a string
 #[allow(unused)]
 fn array_to_string(arr: [u8; 16]) -> String {
     let mut s = String::new();

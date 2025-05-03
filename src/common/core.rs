@@ -6,11 +6,12 @@ use zip::ZipWriter;
 
 use crate::BridgeResult;
 
-// os trait
+/// OsBridge
 pub trait OsBridge {
   fn get_pid(&self) -> BridgeResult<u32>;
 }
 
+/// zip
 pub trait Zip {
   ///  Calculate file size
   fn calculate_size(&self, path: &str) -> BridgeResult<f64>;

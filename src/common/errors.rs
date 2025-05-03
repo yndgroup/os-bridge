@@ -4,11 +4,11 @@ use std::fmt::{Debug, Display};
 
 #[derive(Debug, thiserror::Error)]
 pub enum BridgeError {
-  // IO 错误
+  // IO error
   #[error(transparent)]
   Io(#[from] std::io::Error),
 
-  // 自定义错误信息
+  // custom error
   #[allow(unused)]
   #[error("{0}")]
   WithMsg(String),
@@ -27,7 +27,7 @@ pub struct ErrMsg {
   pub msg: String,
 }
 
-// 为 AppError 实现 std::fmt::Display 特征
+//  AppError ro std::fmt::Display traits
 impl fmt::Display for ErrMsg {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     write!(f, "ErrMsg: {{code:{}，msg :{} }}", self.code, self.msg) // user-facing output

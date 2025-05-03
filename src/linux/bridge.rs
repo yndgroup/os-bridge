@@ -4,7 +4,7 @@ pub struct Bridge {}
 
 impl Bridge {
 
-    // 关联函数
+    // Correlation Function
     #[allow(unused)]
     pub fn new() -> Self {
         Self {}
@@ -12,7 +12,7 @@ impl Bridge {
 
 }
 
-// 实现 OsBridge trait
+// achieve OsBridge trait
 impl OsBridge for Bridge {
     fn get_pid(&self) -> BridgeResult<u32> {
        Ok(utils::get_pid()?)
