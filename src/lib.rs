@@ -3,7 +3,7 @@ mod common;
 pub use common::*;
 
 pub use common::unzip::Unzip;
-// pub use 
+// pub use
 
 type BridgeResult<T> = std::result::Result<T, errors::BridgeError>;
 #[cfg(target_os = "windows")]
@@ -16,11 +16,12 @@ pub use windows::*;
 mod macos;
 
 #[cfg(target_os = "macos")]
-pub  use macos::*;
-
+pub use macos::*;
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 mod linux;
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub use linux::*;
+
+mod tests;

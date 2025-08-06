@@ -1,3 +1,10 @@
+// call c++ function
+// pub fn add(a: i32, b: i32) -> i32 {
+//   unsafe {
+//     add(a, b)
+//   }
+// }
+
 #[cfg(test)]
 mod tests {
   use crate::common::addon::add;

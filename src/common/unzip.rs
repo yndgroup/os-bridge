@@ -1,9 +1,8 @@
 extern crate walkdir;
 extern crate zip;
-use crate::BridgeResult;
-
 use super::core::Zip;
 use super::errors::BridgeError;
+use crate::BridgeResult;
 use std::fs::{self, File};
 use std::io::{self, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -25,48 +24,26 @@ impl Unzip {
 }
 
 impl Zip for Unzip {
-  ///  Calculate file size
-  fn calculate_size(&self, path: &str) -> BridgeResult<f64> {
-    let path = PathBuf::from(path);
-    let mut paths = vec![path];
-    let mut res_size = 0u64;
-    while let Some(path) = paths.pop() {
-      let meta =
-        std::fs::symlink_metadata(&path).map_err(|err| BridgeError::WithMsg(err.to_string()))?;
-      let file_type = meta.file_type();
-      if file_type.is_dir() {
-        let entries =
-          std::fs::read_dir(path).map_err(|err| BridgeError::WithMsg(err.to_string()))?;
-        for entry in entries {
-          paths.push(
-            entry
-              .map_err(|err| BridgeError::WithMsg(err.to_string()))?
-              .path(),
-          );
-        }
-      }
-      if file_type.is_file() {
-        res_size += meta.len();
+  /// extract
+  fn extract<P>(&self, input_path: P, output_dir: P) -> BridgeResult<bool>
+  where
+    P: AsRef<Path>,
+  {
+    if !input_path.as_ref().exists() {
+      return Err(BridgeError::WithMsg(format!(
+        "{} is not exist",
+        input_path.as_ref().display()
+      )));
+    }
+
+    // check output parent is exist
+    if let Some(parent) = output_dir.as_ref().parent() {
+      if !parent.exists() {
+        fs::create_dir_all(parent)
+          .map_err(|err| BridgeError::WithMsg(format!("{}", err.to_string())))?;
       }
     }
-    Ok(res_size as f64)
-  }
 
-  /// Read file size
-  fn get_size(&self, path: &str) -> u64 {
-    let total_size = WalkDir::new(path)
-      .min_depth(1)
-      .max_depth(3)
-      .into_iter()
-      .filter_map(|entry| entry.ok())
-      .filter_map(|entry| entry.metadata().ok())
-      .filter(|metadata| metadata.is_file())
-      .fold(0, |acc, m| acc + m.len());
-    total_size
-  }
-
-  /// extract
-  fn extract(&self, input_path: &str, output_dir: &str) -> BridgeResult<bool> {
     let file = File::open(input_path).map_err(|err| BridgeError::WithMsg(err.to_string()))?;
     let mut archive =
       ZipArchive::new(BufReader::new(file)).map_err(|e| BridgeError::WithMsg(e.to_string()))?;
@@ -82,7 +59,7 @@ impl Zip for Unzip {
             }
             Err(e) => return Err(BridgeError::WithMsg(e.to_string())),
           };
-          let outpath = Path::new(output_dir).join(file.name());
+          let outpath = output_dir.as_ref().join(file.name());
           if file.is_dir() {
             std::fs::create_dir_all(&outpath).map_err(|e| BridgeError::WithMsg(e.to_string()))?;
           } else {
@@ -110,7 +87,7 @@ impl Zip for Unzip {
               return BridgeError::WithMsg(e.to_string());
             })
             .map_err(|err| BridgeError::WithMsg(err.to_string()))?;
-          let outpath = Path::new(output_dir).join(file.name());
+          let outpath = output_dir.as_ref().join(file.name());
           if file.name().ends_with('/') {
             std::fs::create_dir_all(&outpath).map_err(|e| BridgeError::WithMsg(e.to_string()))?;
           } else {
@@ -130,9 +107,28 @@ impl Zip for Unzip {
   }
 
   /// Pay special attention to compressing files in zip format, as it is a single file, not a folder
-  fn compress_file(&self, input_path: &str, out_path: &str) -> BridgeResult<bool> {
-    let new_src_path = PathBuf::from(input_path);
-    let new_dst_path = PathBuf::from(out_path);
+  fn compress_file<P: AsRef<Path>>(&self, input_path: P, out_path: P) -> BridgeResult<bool> {
+    //  check if the path exists
+    let new_src_path = input_path.as_ref();
+    if !new_src_path.is_file() {
+      return Err(BridgeError::WithMsg(format!(
+        "{} is not a file",
+        new_src_path.display()
+      )));
+    }
+    // check if the destination path exists
+    let new_dst_path = out_path.as_ref();
+    if !new_dst_path.exists() {
+      match new_dst_path.parent() {
+        Some(p) => {
+          fs::create_dir_all(p).map_err(|err| {
+            BridgeError::WithMsg(format!("Failed to create directory: {}", err.to_string()))
+          })?;
+        }
+        None => {}
+      }
+    }
+    // write file
     let file = fs::File::create(new_dst_path).map_err(|e| BridgeError::WithMsg(e.to_string()))?;
     let mut zip = ZipWriter::new(file);
     let mut options: FileOptions<'_, ()> =
@@ -150,7 +146,6 @@ impl Zip for Unzip {
     }
     match new_src_path.file_name() {
       Some(src_file_name) => {
-        let s = src_file_name.to_os_string().to_str();
         if let Some(s) = src_file_name.to_os_string().to_str() {
           zip
             .start_file(s, options)
@@ -179,14 +174,33 @@ impl Zip for Unzip {
   }
 
   // Compressed Folder
-  fn compress_folder<P: AsRef<Path>>(&self, input_paths: P, out_file: P) -> BridgeResult<bool> {
-    let src_dir = input_paths.as_ref();
-    let zip_file = File::create(out_file).map_err(|err| BridgeError::WithMsg(err.to_string()))?;
+  fn compress_folder<P: AsRef<Path>>(
+    &self,
+    zip_input_path: P,
+    zip_out_path: P,
+  ) -> BridgeResult<bool> {
+    if !zip_input_path.as_ref().exists() {
+      return Err(BridgeError::WithMsg("folder is not exist".to_string()));
+    }
+    if !zip_input_path.as_ref().is_dir() {
+      return Err(BridgeError::WithMsg(format!(
+        "{} is not a folder",
+        zip_input_path.as_ref().display()
+      )));
+    }
+    if let Some(zip_out_path) = zip_out_path.as_ref().parent() {
+      if !zip_out_path.exists() {
+        std::fs::create_dir_all(zip_out_path)
+          .map_err(|err| BridgeError::WithMsg(err.to_string()))?;
+      }
+    }
+    let zip_file =
+      File::create(zip_out_path).map_err(|err| BridgeError::WithMsg(err.to_string()))?;
     let mut zip_writer = ZipWriter::new(zip_file);
-    match src_dir.parent() {
+    match zip_input_path.as_ref().parent() {
       Some(dir) => {
         self
-          .add_dir_to_zip(dir, src_dir, &mut zip_writer)
+          .add_dir_to_zip(dir, zip_input_path.as_ref(), &mut zip_writer)
           .map_err(|err| BridgeError::WithMsg(err.to_string()))?;
         zip_writer
           .finish()
@@ -197,6 +211,38 @@ impl Zip for Unzip {
         return Err(BridgeError::WithMsg("file name does not exist".to_string()));
       }
     }
+  }
+
+  /// Compress multiple files
+  fn compress_multiple<P>(&self, zip_input_paths: Vec<P>, zip_out_path: P) -> BridgeResult<bool>
+  where
+    P: AsRef<Path>,
+  {
+    if zip_input_paths.is_empty() {
+      return Err(BridgeError::WithMsg(
+        "The input_paths cannot be empty".to_string(),
+      ));
+    }
+    if let Some(out_path) = zip_out_path.as_ref().parent() {
+      if !out_path.exists() {
+        std::fs::create_dir_all(out_path)?;
+      }
+    }
+    // let paths_to_zip: Vec<PathBuf> = zip_input_paths.iter().map(|s| PathBuf::from(s)).collect();
+    let mut buffer = io::Cursor::new(Vec::new());
+    let mut zip_writer = ZipWriter::new(&mut buffer);
+    for path in zip_input_paths {
+      self
+        .add_path_to_zip(&mut zip_writer, &path)
+        .map_err(|err| BridgeError::WithMsg(err.to_string()))?;
+    }
+    zip_writer
+      .finish()
+      .map_err(|err| BridgeError::WithMsg(err.to_string()))?;
+    let compressed_data = buffer.into_inner();
+    fs::write(zip_out_path, &compressed_data)
+      .map_err(|err| BridgeError::WithMsg(err.to_string()))?;
+    Ok(true)
   }
 
   /// Recursive compression folder
@@ -249,34 +295,6 @@ impl Zip for Unzip {
         io::copy(&mut file, zip_writer).map_err(|err| BridgeError::WithMsg(err.to_string()))?;
       }
     }
-    Ok(true)
-  }
-
-  /// Compress multiple files
-  fn compress_multiple(&self, input_paths: Vec<&str>, out_path: &str) -> BridgeResult<bool> {
-    if input_paths.is_empty() {
-      return Err(BridgeError::WithMsg(
-        "The input_paths cannot be empty".to_string(),
-      ));
-    }
-    if out_path.is_empty() {
-      return Err(BridgeError::WithMsg(
-        "The out_path path cannot be empty".to_string(),
-      ));
-    }
-    let paths_to_zip: Vec<PathBuf> = input_paths.iter().map(|s| PathBuf::from(s)).collect();
-    let mut buffer = io::Cursor::new(Vec::new());
-    let mut zip_writer = ZipWriter::new(&mut buffer);
-    for path in paths_to_zip {
-      self
-        .add_path_to_zip(&mut zip_writer, &path)
-        .map_err(|err| BridgeError::WithMsg(err.to_string()))?;
-    }
-    zip_writer
-      .finish()
-      .map_err(|err| BridgeError::WithMsg(err.to_string()))?;
-    let compressed_data = buffer.into_inner();
-    fs::write(out_path, &compressed_data).map_err(|err| BridgeError::WithMsg(err.to_string()))?;
     Ok(true)
   }
 
@@ -421,5 +439,47 @@ impl Zip for Unzip {
       }
     }
     Ok(true)
+  }
+
+  ///  Calculate file size
+  fn calculate_size<P>(&self, path: P) -> BridgeResult<f64>
+  where
+    P: AsRef<Path>,
+  {
+    let mut paths = vec![path.as_ref().to_path_buf()]; // 改为 PathBuf
+    let mut res_size = 0u64;
+    while let Some(path) = paths.pop() {
+      let meta =
+        std::fs::symlink_metadata(&path).map_err(|err| BridgeError::WithMsg(err.to_string()))?;
+      let file_type = meta.file_type();
+      if file_type.is_dir() {
+        let entries =
+          std::fs::read_dir(path).map_err(|err| BridgeError::WithMsg(err.to_string()))?;
+        for entry in entries {
+          let entry = entry.map_err(|err| BridgeError::WithMsg(err.to_string()))?;
+          let path = entry.path();
+          paths.push(path);
+        }
+      }
+      if file_type.is_file() {
+        res_size += meta.len();
+      }
+    }
+    Ok(res_size as f64)
+  }
+  /// Read file size
+  fn get_size<P>(&self, path: P) -> u64
+  where
+    P: AsRef<Path>,
+  {
+    let total_size = WalkDir::new(path)
+      .min_depth(1)
+      .max_depth(3)
+      .into_iter()
+      .filter_map(|entry| entry.ok())
+      .filter_map(|entry| entry.metadata().ok())
+      .filter(|metadata| metadata.is_file())
+      .fold(0, |acc, m| acc + m.len());
+    total_size
   }
 }
