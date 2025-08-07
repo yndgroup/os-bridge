@@ -1,7 +1,7 @@
 extern crate walkdir;
 extern crate zip;
 
-use std::{fs::File, io, path::Path};
+use std::{fs::File, path::Path};
 use zip::ZipWriter;
 
 use crate::BridgeResult;
@@ -23,57 +23,62 @@ pub trait Zip {
   where
     P: AsRef<Path>;
 
-  /// extract
-  fn extract<P>(&self, zip_path: P, zip_output_dir: P) -> BridgeResult<bool>
+  /// @description:  Decompression extractor
+  /// @parama zip_src_path: Decompression target path
+  /// @parama zip_output_path: Output Path
+  fn extract<P>(&self, zip_src_path: P, zip_output_path: P) -> BridgeResult<bool>
   where
     P: AsRef<Path>;
 
-  /// Pay special attention to compressing files in zip format, as it is a single file, not a folder
-  fn compress_file<P>(&self, zip_input_path: P, zip_out_path: P) -> BridgeResult<bool>
+  /// @description:  Single file compression
+  /// @parama zip_input_path: Compression target path
+  /// @parama zip_output_path: Output Path
+  fn file_compression<P>(&self, zip_input_path: P, zip_output_path: P) -> BridgeResult<bool>
   where
     P: AsRef<Path>;
 
-  /// Compressed Folder
-  fn compress_folder<P>(&self, zip_input_paths: P, zip_out_path: P) -> BridgeResult<bool>
-  where
-    P: AsRef<Path>;
-
-  /// Recursive compression folder
-  fn add_dir_to_zip<P>(
+  /// @description:  Single folder compression
+  /// @parama zip_input_path: Compression target path
+  /// @parama zip_output_path: Output Path
+  fn single_folder_compression<P>(
     &self,
+    zip_input_path: P,
+    zip_output_path: P,
+  ) -> BridgeResult<bool>
+  where
+    P: AsRef<Path>;
+
+  /// @description:  Add directory
+  /// @parama zip_writer: ZipWriter
+  /// @parama base_dir: Directory path
+  /// @parama current_dir: Base directory
+  fn add_dir<P>(
+    &self,
+    zip_writer: &mut ZipWriter<File>,
     base_dir: P,
     current_dir: P,
-    zip_writer: &mut ZipWriter<File>,
   ) -> BridgeResult<bool>
   where
     P: AsRef<Path>;
 
-  /// Compress multiple files
-  fn compress_multiple<P>(&self, input_paths: Vec<P>, out_path: P) -> BridgeResult<bool>
+  /// batch compression
+  /// Please provide a list path
+  /// @parama zip_input_paths: [zip_input_path1, zip_input_path2, ...]
+  /// @parama zip_output_path: Output Path
+  fn batch_compression<P>(&self, zip_input_paths: Vec<P>, zip_output_path: P) -> BridgeResult<bool>
   where
     P: AsRef<Path>;
 
-  /// Determine if the directory is empty
-  fn is_empty_directory<P>(&self, path: P) -> BridgeResult<bool>
+  /// @description Check whether the folder is empty
+  /// @parama path: Path
+  fn check_folder_is_empty<P>(&self, path: P) -> BridgeResult<bool>
   where
     P: AsRef<Path>;
 
-  /// Add path to zip file
-  fn add_path_to_zip<P>(
-    &self,
-    zip_writer: &mut ZipWriter<&mut io::Cursor<Vec<u8>>>,
-    path: P,
-  ) -> BridgeResult<bool>
-  where
-    P: AsRef<Path>;
-
-  // Recursively add directory to zip file
-  fn add_absolute_dir_to_zip<P>(
-    &self,
-    zip_writer: &mut ZipWriter<&mut io::Cursor<Vec<u8>>>,
-    path: P,
-    prefix: &Path,
-  ) -> BridgeResult<bool>
+  /// @description: Add a path to the zip file
+  /// @parama zip_writer: zip_writer
+  /// @parama path: Path
+  fn add_path<P>(&self, zip_writer: &mut ZipWriter<File>, path: P) -> BridgeResult<bool>
   where
     P: AsRef<Path>;
 }

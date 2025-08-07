@@ -19,9 +19,17 @@ impl BridgeError {
   pub fn new(msg: &str) -> Self {
     BridgeError::WithMsg(msg.to_string())
   }
+}
 
-  pub fn from(msg: &str) {
-    BridgeError::new(msg);
+impl From<&str> for BridgeError {
+  fn from(msg: &str) -> Self {
+    BridgeError::new(msg)
+  }
+}
+
+impl From<String> for BridgeError {
+  fn from(msg: String) -> Self {
+    BridgeError::new(&msg)
   }
 }
 

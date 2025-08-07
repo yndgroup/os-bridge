@@ -1,2 +1,10 @@
 /target
 .DS_Store
+zip*
+.classpath
+.project
+.settings
+.gitignore
+.git
+.idea
+.vscode

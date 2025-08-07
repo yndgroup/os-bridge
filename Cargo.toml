@@ -1,6 +1,6 @@
 [package]
 name = "os-bridge"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["ydaqiong <ydaqiong@gmail.com>"]
 description = "A cross platform API bridge based on Rust language"
@@ -19,7 +19,7 @@ macos = []                              # 启用 macos 支持
 [dependencies]
 thiserror = "2.0.12"
 sysinfo = { version = "0.34.2" }
-zip = "2.2.1"
+zip = { version = "2.2.1", features = ["_deflate-any"] }
 walkdir = "2.5.0"
 rand = "0.9.0"
 
